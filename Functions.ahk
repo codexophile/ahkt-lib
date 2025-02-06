@@ -1,4 +1,6 @@
-﻿AllPressed(Keys*) {
+﻿;  MARK: Keyboard
+
+AllPressed(Keys*) {
   for key in Keys {
     if !GetKeyState(key, "P")
       return false
@@ -14,7 +16,7 @@ AllNotPressed(Keys*) {
   return true
 }
 
-;//!SECTION
+;  MARK: Explorer
 
 GetVivaldiPath() {
   Path1 := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe"
@@ -41,14 +43,6 @@ GetExplorerPath() {
 
 GetAppDataPath() {
   return StrReplace(A_AppData, '\roaming', , 0)
-}
-
-GoogleIflSiteSearch(site, Query) {
-  ; BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
-  BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
-  BrowserUrlBase := "https://www.google.com/search?btnI=1&q=site:"
-  Query := StrReplace(Query, ' ', '%20')
-  Run BrowserPath BrowserUrlBase site "+" Query
 }
 
 GetCurrentMediaFileName() {
@@ -101,6 +95,16 @@ GetShowMovieInfo(MediaFullName, &ShowMovieName := '', &Season := '', &Episode :=
   }
 }
 
+;  MARK: Web
+
+GoogleIflSiteSearch(site, Query) {
+  ; BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
+  BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
+  BrowserUrlBase := "https://www.google.com/search?btnI=1&q=site:"
+  Query := StrReplace(Query, ' ', '%20')
+  Run BrowserPath BrowserUrlBase site "+" Query
+}
+
 openInTrakt(GivenPath, Prompt := false) {
 
   BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
@@ -124,6 +128,8 @@ openInTrakt(GivenPath, Prompt := false) {
     Run RunWhat
 
 }
+
+;  MARK: Other
 
 PowerShell(commands, options := "", return_ := false) {
 
@@ -152,7 +158,7 @@ PowerShell(commands, options := "", return_ := false) {
 
 }
 
-;//!SECTION - Window functions
+;  MARK: Window functions
 
 MinimizeAllButActive() {
   ActiveWindowId := WinGetID("A")
@@ -178,7 +184,7 @@ WinUnderCursor(WindowTitle := '') {
   return WindowUnderCursor = WinGetID(WindowTitle)
 }
 
-;//!SECTION - String functions
+;  MARK: String functions
 
 ClipSend(Text, PS := "") {
   ClipSave := A_Clipboard
