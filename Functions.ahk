@@ -97,6 +97,16 @@ GetShowMovieInfo(MediaFullName, &ShowMovieName := '', &Season := '', &Episode :=
 
 ;  MARK: Web
 
+RunInPrivateProfile(Url) {
+  browserPath := GetVivaldiPath()
+  if (!browserPath) {
+    MsgBox 'Vivaldi not found'
+    return
+  }
+  BrowserCommandLine := browserPath " --profile-directory=`"Profile 1`" --disable-features=LockProfileCookieDatabase"
+  Run browserPath ' ' Url
+}
+
 GoogleIflSiteSearch(site, Query) {
   ; BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
   BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
