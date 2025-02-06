@@ -103,6 +103,16 @@ RunInPrivateProfile(Url) {
     MsgBox 'Vivaldi not found'
     return
   }
+  BrowserCommandLine := browserPath " --profile-directory=`"Default`" --disable-features=LockProfileCookieDatabase"
+  Run browserPath ' ' Url
+}
+
+RunInMainProfile(Url) {
+  browserPath := GetVivaldiPath()
+  if (!browserPath) {
+    MsgBox 'Vivaldi not found'
+    return
+  }
   BrowserCommandLine := browserPath " --profile-directory=`"Profile 1`" --disable-features=LockProfileCookieDatabase"
   Run browserPath ' ' Url
 }
