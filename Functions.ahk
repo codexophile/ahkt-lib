@@ -1,4 +1,30 @@
-﻿;  MARK: Keyboard
+﻿;  MARK: Gui
+
+CustomPrompt(BodyText := '', Title := '', OptionsTexts*) {
+
+  MyGui := Gui()
+  MyGui.Title := Title
+
+  MyGui.SetFont("s10")
+  MyGui.Add("Text", , BodyText)
+
+  for index, optionText in OptionsTexts {
+    MyGui.Add("Button", 'v' OptionText, OptionText).OnEvent("Click", HandleButtonClick)
+  }
+
+  Result := ''
+  HandleButtonClick(Control, null) {
+    Result := Control.Name
+    MyGui.Destroy()
+  }
+
+  MyGui.Show()
+  WinWaitClose(MyGui)
+  return Result
+
+}
+
+;  MARK: Keyboard
 
 AllPressed(Keys*) {
   for key in Keys {
