@@ -180,6 +180,51 @@ PowerShell(commands, options := "", return_ := false) {
 
 ;  MARK: Window functions
 
+IsWindowFullScreen(winTitle := "A") {
+  ; Get the window handle
+  if winTitle = "A"
+    winHandle := WinExist("A")
+  else
+    winHandle := WinExist(winTitle)
+
+  if !winHandle
+    return false
+
+  ; Get window style
+  style := WinGetStyle(winHandle)
+
+  ; Get window information
+  try {
+    X := Y := Width := Height := 0  ; Initialize variables
+    WinGetPos(&X, &Y, &Width, &Height, winHandle)
+  } catch {
+    return false
+  }
+
+  ; Get monitor information
+  monitorHandle := DllCall("MonitorFromWindow", "Ptr", winHandle, "UInt", 0x2)
+  if (monitorHandle) {
+    ; Create MONITOR_INFO structure
+    NumPut("UInt", 40, MONITOR_INFO := Buffer(40))
+
+    ; Get monitor info
+    if DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", MONITOR_INFO) {
+      ; Extract monitor working area
+      monitorLeft := NumGet(MONITOR_INFO, 20, "Int")
+      monitorTop := NumGet(MONITOR_INFO, 24, "Int")
+      monitorRight := NumGet(MONITOR_INFO, 28, "Int")
+      monitorBottom := NumGet(MONITOR_INFO, 32, "Int")
+
+      ; Check if window covers the entire monitor and has no border
+      return (X <= monitorLeft && Y <= monitorTop
+        && Width >= monitorRight - monitorLeft
+        && Height >= monitorBottom - monitorTop
+        && !(style & 0xC00000))  ; WS_CAPTION = 0xC00000
+    }
+  }
+  return false
+}
+
 MinimizeAllButActive() {
   ActiveWindowId := WinGetID("A")
   WindowIds := WinGetList()
