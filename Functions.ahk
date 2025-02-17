@@ -1,4 +1,4 @@
-;  MARK: Keyboard
+﻿;  MARK: Keyboard
 
 AllPressed(Keys*) {
   for key in Keys {
