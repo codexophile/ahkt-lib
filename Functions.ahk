@@ -1,4 +1,4 @@
-﻿;  MARK: Keyboard
+;  MARK: Keyboard
 
 AllPressed(Keys*) {
   for key in Keys {
@@ -183,7 +183,8 @@ PowerShell(commands, options := "", return_ := false) {
 MinimizeAllButActive() {
   ActiveWindowId := WinGetID("A")
   WindowIds := WinGetList()
-  ExcludeList := ["ahk_class Internet Explorer_Hidden"]
+  ExcludeList := ["ahk_class Internet Explorer_Hidden", 'ahk_class PseudoConsoleWindow', 'ahk_class Progman'
+    'ahk_class RainmeterMeterWindow']
   for Id in WindowIds {
     if (Id != ActiveWindowId) {
       WinMinimize('ahk_id ' Id)
