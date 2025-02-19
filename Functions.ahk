@@ -1,4 +1,14 @@
-﻿;  MARK: Gui
+﻿;  MARK: Array
+
+ArrayIncludes(arr, value) {
+  for element in arr {
+    if (element = value)
+      return true
+  }
+  return false
+}
+
+;  MARK: Gui
 
 CustomPrompt(BodyText := '', Title := '', OptionsTexts*) {
 
