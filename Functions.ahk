@@ -8,6 +8,16 @@ ArrayIncludes(arr, value) {
   return false
 }
 
+ArrayJoin(arr, delimiter := " ") {
+  result := ""
+  for index, element in arr {
+    if (index > 1)
+      result .= delimiter
+    result .= element
+  }
+  return result
+}
+
 ;  MARK: Gui
 
 CustomPrompt(BodyText := '', Title := '', OptionsTexts*) {
@@ -286,6 +296,33 @@ WinUnderCursor(WindowTitle := '') {
   return WindowUnderCursor = WinGetID(WindowTitle)
 }
 
+AnimateWindowMove(winTitle, targetX, targetY, duration := 1000, fps := 60) {
+  if not WinExist(winTitle)
+    return false
+
+  WinGetPos(&startX, &startY)
+
+  steps := duration * fps // 1000
+
+  loop steps {
+    t := A_Index / steps
+    easedT := EaseInOutCubic(t)
+
+    newX := startX + (targetX - startX) * easedT
+    newY := startY + (targetY - startY) * easedT
+
+    WinMove(Round(newX), Round(newY))
+    Sleep(1000 // fps)
+  }
+
+  WinMove(targetX, targetY) ; Ensure final position is exact
+  return true
+}
+
+EaseInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
+}
+
 ;  MARK: String functions
 
 ClipSend(Text, PS := "") {
@@ -322,41 +359,4 @@ SplitIntoLines(text, lineLength := 40) {
   }
 
   return RTrim(result)
-}
-
-Join(arr, delimiter := " ") {
-  result := ""
-  for index, element in arr {
-    if (index > 1)
-      result .= delimiter
-    result .= element
-  }
-  return result
-}
-
-AnimateWindowMove(winTitle, targetX, targetY, duration := 1000, fps := 60) {
-  if not WinExist(winTitle)
-    return false
-
-  WinGetPos(&startX, &startY)
-
-  steps := duration * fps // 1000
-
-  loop steps {
-    t := A_Index / steps
-    easedT := EaseInOutCubic(t)
-
-    newX := startX + (targetX - startX) * easedT
-    newY := startY + (targetY - startY) * easedT
-
-    WinMove(Round(newX), Round(newY))
-    Sleep(1000 // fps)
-  }
-
-  WinMove(targetX, targetY) ; Ensure final position is exact
-  return true
-}
-
-EaseInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
 }
