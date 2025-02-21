@@ -325,6 +325,29 @@ EaseInOutCubic(t) {
 
 ;  MARK: String functions
 
+HexToAscii(hexString) {
+  ; Remove any spaces and commas from the input
+  hexString := RegExReplace(hexString, "[,\s]", "")
+
+  ; Initialize empty result string
+  result := ""
+
+  ; Process hex string two characters at a time
+  loop StrLen(hexString) // 2 {
+    ; Extract each pair of hex characters
+    hexPair := SubStr(hexString, A_Index * 2 - 1, 2)
+    ; Convert hex pair to decimal
+    decimal := Integer("0x" . hexPair)
+    ; Convert decimal to character if it's in printable ASCII range (32-126)
+    if (decimal >= 32 && decimal <= 126)
+      result .= Chr(decimal)
+    else
+      result .= "." ; Replace non-printable characters with a dot
+  }
+
+  return result
+}
+
 ClipSend(Text, PS := "") {
   ClipSave := A_Clipboard
   A_Clipboard := ''
