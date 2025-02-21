@@ -64,6 +64,10 @@ AllNotPressed(Keys*) {
 
 ;  MARK: Explorer
 
+RevealInExplorer(Path) {
+  Run "explorer.exe /select, " Path
+}
+
 GetVivaldiPath() {
   Path1 := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe"
   Path2 := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe"
