@@ -201,6 +201,173 @@ openInTrakt(GivenPath, Prompt := false) {
 
 ;  MARK: Other
 
+/**
+ * Executes a string of AutoHotkey v2 code dynamically by saving it to a temporary
+ * file and running it as a separate process.
+ * 
+ * @param CodeString {String} The string containing the AutoHotkey v2 code to execute.
+ * @param WaitForCompletion {Boolean} [Optional] If true (default), the function waits
+ *   for the dynamic script to finish before returning. If false, the function
+ *   returns immediately after launching the script.
+ * @param DeleteTempFile {Boolean} [Optional] If true (default), the temporary .ahk
+ *   file created will be deleted after execution (or attempted launch if not waiting).
+ *   Set to false for debugging purposes (to inspect the generated script).
+ * @param ShowErrors {Boolean} [Optional] If true (default), MsgBox errors encountered
+ *   during file creation or the Run command's *initial launch attempt* will be shown.
+ *   Runtime errors *within* the dynamic code will appear in their own error dialogs
+ *   from the separate process, regardless of this setting.
+ * 
+ * @returns {Integer | Boolean}
+ *   - If WaitForCompletion is true: Returns true if Run successfully launched the process
+ *     (didn't throw an error) and the script subsequently waited for it to complete.
+ *     Returns false if Run threw an error on launch or if another error occurred beforehand.
+ *   - If WaitForCompletion is false: Returns the Process ID (PID) of the launched
+ *     script if the initial launch was successful (PID > 0), or 0 if the Run command
+ *     failed to launch (e.g., returned PID 0, though typically it throws).
+ *     Returns false if there was an error *before* the Run command (e.g., file write error).
+ *     Note: A returned PID only confirms successful *launch*, not successful *execution*
+ *     of the dynamic code.
+ */
+RunDynamicAHK(CodeString, WaitForCompletion := true, DeleteTempFile := true, ShowErrors := true) {
+  local tempScriptPath, file, runOptions, pid := 0 ; Initialize pid
+
+  ; Basic validation
+  if Trim(CodeString) == "" {
+    if ShowErrors
+      MsgBox "RunDynamicAHK Error: CodeString parameter cannot be empty.", "RunDynamicAHK Error", 48 ; Exclamation icon
+    return false
+  }
+
+  ; Generate temporary file path
+  tempScriptPath := A_Temp . "\DynamicAHK_" . A_TickCount . "_" . Random(1000, 9999) . ".ahk"
+
+  Try {
+    ; --- Write code to temporary file ---
+    file := FileOpen(tempScriptPath, "w", "UTF-8-RAW")
+    if !IsObject(file) {
+      throw Error("Failed to open temporary file for writing: " . tempScriptPath)
+    }
+    file.Write("#Requires AutoHotkey v2.0`n")
+    file.Write(CodeString)
+    file.Close()
+
+    ; --- Prepare and execute the Run command ---
+    if WaitForCompletion {
+      runOptions := "Wait"
+      ; Execute and wait. If Run fails to launch, it throws an Error.
+      ; If successful, execution pauses here until the process ends.
+      RunWait(A_AhkPath . " " "" . tempScriptPath . "" "", , runOptions)
+      ; If we reach here, Run launched successfully and the wait completed.
+      return true
+    } else {
+      runOptions := ""
+      ; Execute without waiting. Returns PID on successful launch, throws Error on failure.
+      pid := Run(A_AhkPath . " " "" . tempScriptPath . "" "", , runOptions)
+      ; Although Run typically throws on failure, defensively check PID just in case.
+      if (pid > 0) {
+        return pid ; Return the PID of the successfully launched process
+      } else {
+        ; This case might be rare as Run usually throws, but handle defensively.
+        throw Error("Run command failed to launch the process (PID=" . pid . ").")
+      }
+    }
+
+  } Catch Error as e {
+    if ShowErrors {
+      ; MsgBox(
+      ;   "RunDynamicAHK Error:`n`n"
+      ;   . "File: " (e.File ?? "N/A") "`n"
+      ;   . "Line: " (e.Line ?? "N/A") "`n"
+      ;   . "Message: " e.Message "`n"
+      ;   . "Extra: " (e.Extra ?? "N/A"),
+      ;   "RunDynamicAHK Error", 16
+      ; ) ; Stop icon
+    }
+    return false ; Indicate failure occurred
+  } Finally {
+    ; --- Clean up the temporary file ---
+    if DeleteTempFile {
+      Try FileDelete tempScriptPath
+      Catch {
+        ; Ignore cleanup errors
+      }
+    }
+  }
+}
+
+
+/**
+ * Converts a data URL from clipboard to an image file
+ * @param outputPath The path where the image will be saved. If empty, uses desktop with timestamp
+ * @param clipboardText Optional clipboard text. If empty, gets from clipboard
+ * @return True if successful, False otherwise
+ */
+DataUrlToImage(outputPath := "", clipboardText := "") {
+  ; Get data URL from clipboard if not provided
+  if (clipboardText = "") {
+    clipboardText := A_Clipboard
+  }
+
+  ; Check if the clipboard contains a data URL
+  if (!RegExMatch(clipboardText, "^data:image\/[^;]+;base64,")) {
+    MsgBox("Clipboard does not contain a valid image data URL")
+    return false
+  }
+
+  ; Extract the base64 data (everything after the comma)
+  base64Data := RegExReplace(clipboardText, "^data:image\/[^;]+;base64,", "")
+
+  ; Generate output path if not provided
+  if (outputPath = "") {
+    timestamp := FormatTime(, "yyyyMMdd_HHmmss")
+    outputPath := A_Desktop "\clipboard_image_" timestamp ".png"
+  }
+
+  try {
+    ; Convert base64 to binary
+    binary := Base64ToBinary(base64Data)
+
+    ; Write binary data to file
+    file := FileOpen(outputPath, "w")
+    if !IsObject(file) {
+      MsgBox("Error: Unable to open file for writing.`n" outputPath)
+      return false
+    }
+
+    file.RawWrite(binary, binary.Size)
+    file.Close()
+
+    MsgBox("Image saved to:`n" outputPath)
+    return true
+  } catch Error as e {
+    MsgBox("Error converting data URL to image:`n" e.Message)
+    return false
+  }
+}
+
+/**
+ * Converts base64 string to binary data
+ * @param base64 The base64 string to convert
+ * @return Binary buffer
+ */
+Base64ToBinary(base64) {
+  ; Create DllCall to CryptStringToBinary
+  static CRYPT_STRING_BASE64 := 0x00000001
+
+  ; Calculate length
+  if (DllCall("crypt32\CryptStringToBinary", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", 0, "UInt*", &size := 0, "Ptr", 0, "Ptr", 0)) {
+    ; Allocate buffer
+    buffer := Buffer(size, 0)
+
+    ; Convert string
+    if (DllCall("crypt32\CryptStringToBinary", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", buffer.Ptr, "UInt*", &size, "Ptr", 0, "Ptr", 0)) {
+      return buffer
+    }
+  }
+
+  throw Error("Failed to decode base64 string")
+}
+
 PowerShell(commands, options := "", return_ := false) {
 
   commands := ". ( 'D:\Mega\IDEs\powershell\#lib\functions.ps1' );`n" commands
