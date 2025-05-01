@@ -46,7 +46,7 @@ CustomPrompt(BodyText := '', Title := '', OptionsTexts*) {
 
 ;  MARK: Keyboard
 
-AllPressed(Keys*) {
+AllPressedPhysical(Keys*) {
   for key in Keys {
     if !GetKeyState(key, "P")
       return false
@@ -54,9 +54,17 @@ AllPressed(Keys*) {
   return true
 }
 
-AllNotPressed(Keys*) {
+AllNotPressedPhysical(Keys*) {
   for key in Keys {
     if GetKeyState(key, "P")
+      return false
+  }
+  return true
+}
+
+AllNotPressed(Keys*) {
+  for key in Keys {
+    if GetKeyState(key)
       return false
   }
   return true
