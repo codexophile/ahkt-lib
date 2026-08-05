@@ -257,34 +257,31 @@ RunInMainProfile(Url) {
 }
 
 GoogleIflSiteSearch(site, Query) {
-  BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
-  ; BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
-  BrowserUrlBase := "https://www.google.com/search?btnI=1&q=site:"
+  UrlBase := "https://www.google.com/search?btnI=1&q=site:"
   Query := StrReplace(Query, ' ', '%20')
-  Run BrowserPath BrowserUrlBase site "+" Query
+  FinalUrl := UrlBase site "+" Query
+  Run FinalUrl
 }
 
 openInTrakt(GivenPath, Prompt := false) {
-
-  ; BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
-  BrowserPath := "C:\Users\xq151\AppData\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
-  BrowserUrlBase := "https://www.google.com/search?btnI=1&q=inurl:trakt.tv/"
 
   Result := GetShowMovieInfo(GivenPath, &Name, &Season, &Episode)
 
   switch Result {
     case 'Show':
       Message := "Open " Name " S" Season "E" Episode " in Trakt?"
-      RunWhat := BrowserPath BrowserUrlBase "shows/*/seasons/" Season "/episodes/" Episode "+inurl:(" Name ")"
+      Query := "shows/*/seasons/" Season "/episodes/" Episode "+inurl:(" Name ")"
     case 'Movie':
       Message := "Open " Name " in Trakt?"
-      RunWhat := BrowserPath BrowserUrlBase "movies/+" Name
+      Query := "movies/+" Name
   }
 
   if (Prompt)
     Response := MsgBox(Message, , 36)
   if ( NOT Prompt OR Response = "Yes")
-    Run RunWhat
+    GoogleIflSiteSearch("trakt.tv", Query)
+  else
+    return
 
 }
 
