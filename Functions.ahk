@@ -1,9 +1,14 @@
 ﻿;  MARK: Array
 
-ArrayIncludes(arr, value) {
+ArrayIncludes(arr, value, isRegex := false) {
   for element in arr {
-    if (element = value)
-      return true
+    if isRegex {
+      if RegExMatch(element, value, &MatchObj)
+        return MatchObj
+    } else {
+      if (element = value)
+        return true
+    }
   }
   return false
 }
