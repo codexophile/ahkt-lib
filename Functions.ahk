@@ -22,6 +22,17 @@ ArrayJoin(arr, delimiter := " ") {
   }
   return result
 }
+IsVideoFile(ext) {
+  static videoExts := Map(
+    "mp4", true, "mkv", true, "mov", true, "avi", true, "webm", true,
+    "m4v", true, "wmv", true, "flv", true, "mpg", true, "mpeg", true,
+    "mts", true, "m2ts", true, "ts", true, "3gp", true, "f4v", true
+  )
+  if !IsSet(ext)
+    return false
+  extLower := StrLower(ext)
+  return videoExts.Has(extLower)
+}
 
 ;  MARK: Gui
 
