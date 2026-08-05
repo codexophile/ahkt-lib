@@ -22,6 +22,9 @@ ArrayJoin(arr, delimiter := " ") {
   }
   return result
 }
+
+;  MARK: File system
+
 IsVideoFile(ext) {
   static videoExts := Map(
     "mp4", true, "mkv", true, "mov", true, "avi", true, "webm", true,
@@ -171,13 +174,75 @@ GetShowMovieInfo(MediaFullName, &ShowMovieName := '', &Season := '', &Episode :=
 
 ;  MARK: Web
 
+GetDefaultBrowser() {
+  ; Step 1: Get the ProgId of the default HTTP handler
+  try {
+    progId := RegRead("HKEY_CURRENT_USER\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice",
+      "ProgId")
+  } catch {
+    return ""
+  }
+
+  ; Step 2: Resolve the ProgId to its shell open command
+  try {
+    command := RegRead("HKEY_CLASSES_ROOT\" progId "\shell\open\command")
+  } catch {
+    ; Some browsers register per-user instead of machine-wide
+    try {
+      command := RegRead("HKEY_CURRENT_USER\Software\Classes\" progId "\shell\open\command")
+    } catch {
+      return ""
+    }
+  }
+
+  ; Step 3: Extract the executable path from the command string
+  ; command looks like: "C:\Program Files\...\browser.exe" -- "%1"
+  if RegExMatch(command, '^"([^"]+)"', &m)
+    exePath := m[1]
+  else
+    exePath := Trim(StrSplit(command, " ")[1])
+
+  return exePath
+}
+
+OpenUrlInBrowser(Url, BrowserName := "Default", ProfileName := "LastUsed") {
+  if (BrowserName = "Default" AND ProfileName = "LastUsed") {
+    Run Url
+    return
+  }
+  switch (BrowserName) {
+    case "Vivaldi":
+      BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe"
+    case "Chrome":
+      BrowserPath := EnvGet('ProgramW6432') "\Google\Chrome\Application\chrome.exe"
+    case "Edge":
+      BrowserPath := EnvGet('ProgramW6432') "\Microsoft\Edge\Application\msedge.exe"
+    case "Firefox":
+      BrowserPath := EnvGet('ProgramW6432') "\Mozilla Firefox\firefox.exe"
+    case "Default":
+      BrowserPath := GetDefaultBrowser()
+    default:
+      MsgBox "Unsupported browser: " BrowserName
+      return
+  }
+  if InStr(BrowserPath, "firefox.exe") {
+    BrowserName := "Firefox"
+  }
+  if (BrowserName = "Firefox") {
+    BrowserCommandLine := "-P " ProfileName
+  } else {
+    BrowserCommandLine := "--profile-directory=" ProfileName
+  }
+  Run BrowserPath " " BrowserCommandLine " " Url
+}
+
 RunInPrivateProfile(Url) {
   browserPath := GetVivaldiPath()
   if (!browserPath) {
     MsgBox 'Vivaldi not found'
     return
   }
-  BrowserCommandLine := browserPath " --profile-directory=`"Default`" --disable-features=LockProfileCookieDatabase"
+  BrowserCommandLine := browserPath " --profile-directory=`"Profile 1`" --disable-features=LockProfileCookieDatabase"
   Run browserPath ' ' Url
 }
 
@@ -192,8 +257,8 @@ RunInMainProfile(Url) {
 }
 
 GoogleIflSiteSearch(site, Query) {
-  ; BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
-  BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
+  BrowserPath := GetAppDataPath() "\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
+  ; BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
   BrowserUrlBase := "https://www.google.com/search?btnI=1&q=site:"
   Query := StrReplace(Query, ' ', '%20')
   Run BrowserPath BrowserUrlBase site "+" Query
@@ -201,8 +266,8 @@ GoogleIflSiteSearch(site, Query) {
 
 openInTrakt(GivenPath, Prompt := false) {
 
-  BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
-  ; BrowserPath := "C:\Users\xq151\AppData\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
+  ; BrowserPath := A_ProgramFiles "\Vivaldi\Application\vivaldi.exe --profile-directory=Default --disable-features=LockProfileCookieDatabase "
+  BrowserPath := "C:\Users\xq151\AppData\Local\Vivaldi\Application\vivaldi.exe --profile-directory=`"Default`" "
   BrowserUrlBase := "https://www.google.com/search?btnI=1&q=inurl:trakt.tv/"
 
   Result := GetShowMovieInfo(GivenPath, &Name, &Season, &Episode)
@@ -224,6 +289,21 @@ openInTrakt(GivenPath, Prompt := false) {
 }
 
 ;  MARK: Other
+
+KandoBlackList := [
+  'Thief',
+  'Little Nightmares ',
+  'Little Nightmares II Enhanced  ',
+  'Little Nightmares III  ',
+  'REANIMAL  '
+]
+TriggerKando() {
+  if (ArrayIncludes(KandoBlackList, WinGetTitle("A"))) {
+    Send '{LButton}'
+    return
+  }
+  Send "^+!{Space}"
+}
 
 /**
  * Executes a string of AutoHotkey v2 code dynamically by saving it to a temporary
@@ -265,7 +345,7 @@ RunDynamicAHK(CodeString, WaitForCompletion := true, DeleteTempFile := true, Sho
   ; Generate temporary file path
   tempScriptPath := A_Temp . "\DynamicAHK_" . A_TickCount . "_" . Random(1000, 9999) . ".ahk"
 
-  Try {
+  try {
     ; --- Write code to temporary file ---
     file := FileOpen(tempScriptPath, "w", "UTF-8-RAW")
     if !IsObject(file) {
@@ -296,7 +376,7 @@ RunDynamicAHK(CodeString, WaitForCompletion := true, DeleteTempFile := true, Sho
       }
     }
 
-  } Catch Error as e {
+  } catch Error as e {
     if ShowErrors {
       ; MsgBox(
       ;   "RunDynamicAHK Error:`n`n"
@@ -308,17 +388,16 @@ RunDynamicAHK(CodeString, WaitForCompletion := true, DeleteTempFile := true, Sho
       ; ) ; Stop icon
     }
     return false ; Indicate failure occurred
-  } Finally {
+  } finally {
     ; --- Clean up the temporary file ---
     if DeleteTempFile {
-      Try FileDelete tempScriptPath
-      Catch {
+      try FileDelete tempScriptPath
+      catch {
         ; Ignore cleanup errors
       }
     }
   }
 }
-
 
 /**
  * Converts a data URL from clipboard to an image file
@@ -379,12 +458,14 @@ Base64ToBinary(base64) {
   static CRYPT_STRING_BASE64 := 0x00000001
 
   ; Calculate length
-  if (DllCall("crypt32\CryptStringToBinary", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", 0, "UInt*", &size := 0, "Ptr", 0, "Ptr", 0)) {
+  if (DllCall("crypt32\CryptStringToBinary", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", 0, "UInt*", &
+    size := 0, "Ptr", 0, "Ptr", 0)) {
     ; Allocate buffer
     buffer := Buffer(size, 0)
 
     ; Convert string
-    if (DllCall("crypt32\CryptStringToBinary", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", buffer.Ptr, "UInt*", &size, "Ptr", 0, "Ptr", 0)) {
+    if (DllCall("crypt32\CryptStringToBinary", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", buffer.Ptr,
+      "UInt*", &size, "Ptr", 0, "Ptr", 0)) {
       return buffer
     }
   }
@@ -420,6 +501,12 @@ PowerShell(commands, options := "", return_ := false) {
 }
 
 ;  MARK: Window functions
+
+GroupAddWrapper(GroupName, WindowsTitles*) {
+  for title in WindowsTitles {
+    GroupAdd(GroupName, title)
+  }
+}
 
 IsWindowFullScreen(winTitle := "A") {
   ; Get the window handle
