@@ -497,6 +497,50 @@ PowerShell(commands, options := "", return_ := false) {
 
 }
 
+HiddenCommandLine(cmd) {
+  static CREATE_NO_WINDOW := 0x08000000
+  pipeRead := 0, pipeWrite := 0
+
+  sa := Buffer(24, 0)
+  NumPut("UInt", 24, sa, 0)      ; nLength
+  NumPut("Ptr", 0, sa, 8)        ; lpSecurityDescriptor = NULL
+  NumPut("Int", 1, sa, 16)       ; bInheritHandle = TRUE
+
+  DllCall("CreatePipe", "Ptr*", &pipeRead, "Ptr*", &pipeWrite, "Ptr", sa, "UInt", 0)
+  DllCall("SetHandleInformation", "Ptr", pipeRead, "UInt", 1, "UInt", 0)
+
+  si := Buffer(104, 0)
+  NumPut("UInt", 104, si, 0)
+  NumPut("UInt", 0x100, si, 60)      ; STARTF_USESTDHANDLES
+  NumPut("Ptr", pipeWrite, si, 88)   ; hStdOutput
+  NumPut("Ptr", pipeWrite, si, 96)   ; hStdError
+
+  pi := Buffer(24, 0)
+  fullCmd := 'cmd.exe /c ' cmd
+
+  ok := DllCall("CreateProcess", "Ptr", 0, "Str", fullCmd, "Ptr", 0, "Ptr", 0,
+    "Int", 1, "UInt", CREATE_NO_WINDOW, "Ptr", 0, "Ptr", 0,
+    "Ptr", si, "Ptr", pi)
+
+  DllCall("CloseHandle", "Ptr", pipeWrite)
+
+  output := ""
+  buf := Buffer(4096)
+  loop {
+    bytesRead := 0
+    success := DllCall("ReadFile", "Ptr", pipeRead, "Ptr", buf, "UInt", 4096, "UInt*", &bytesRead, "Ptr", 0)
+    if (!success || bytesRead = 0)
+      break
+    output .= StrGet(buf, bytesRead, "CP0")
+  }
+
+  DllCall("WaitForSingleObject", "Ptr", NumGet(pi, 0, "Ptr"), "UInt", 0xFFFFFFFF)
+  DllCall("CloseHandle", "Ptr", pipeRead)
+  DllCall("CloseHandle", "Ptr", NumGet(pi, 0, "Ptr"))
+  DllCall("CloseHandle", "Ptr", NumGet(pi, 8, "Ptr"))
+  return output
+}
+
 ;  MARK: Window functions
 
 GroupAddWrapper(GroupName, WindowsTitles*) {
