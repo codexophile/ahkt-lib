@@ -287,6 +287,17 @@ openInTrakt(GivenPath, Prompt := false) {
 
 ;  MARK: Other
 
+RunDirElectron(DirPath, Args := []) {
+  ElectronExePath := A_AppData "\Electron Fiddle\electron-bin\current\electron.exe"
+  if !FileExist(ElectronExePath) {
+    MsgBox "Electron Fiddle not found. Please install it first."
+    return
+  }
+  ArgsString := Join(" ", , Args)
+  MsgBox ArgsString
+  Run ElectronExePath " " DirPath " " ArgsString
+}
+
 KandoBlackList := [
   'Thief',
   'Little Nightmares ',
@@ -647,6 +658,22 @@ EaseInOutCubic(t) {
 }
 
 ;  MARK: String functions
+
+GetLine(text, lineNumber) {
+  lines := StrSplit(text, "`n", "`r")
+  return lines[lineNumber]
+}
+
+Join(Delimiter := " ", Wrapper := "", ValuesArray := []) {
+  Result := ""
+  for index, value in ValuesArray {
+    Result .= value
+    if (index < ValuesArray.Length)
+      Result .= Delimiter
+  }
+  Result := Wrapper Result Wrapper
+  return Result
+}
 
 HexToAscii(hexString) {
   ; Remove any spaces and commas from the input
